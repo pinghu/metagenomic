@@ -1,0 +1,232 @@
+---
+title: "MDE_Phyloseq"
+author: "ping hu"
+date: "3/20/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list=ls())
+library(devtools)
+library(dplyr);library(tidyr);library(phyloseq);library(ggplot2);
+library(readxl)
+```
+```{r echo=FALSE}
+filename="CountL6.WhiteUA"
+test <- read.table(filename, header = TRUE, row.names = 1, sep="\t")
+test[is.na(test)]<-0
+d=dim(test)
+title=colnames(test)[2:d[2]]
+meta_split = strsplit(title, "\\.")
+
+meta_split_site = sapply(meta_split, function(x) x[[1]])
+meta_split_eth = sapply(meta_split, function(x) x[[2]])
+meta_split_AgeGrp = sapply(meta_split, function(x) x[[3]])
+meta_split_Age = sapply(meta_split, function(x) x[[4]])
+meta_split_SID = sapply(meta_split, function(x) x[[5]])
+meta_split_Order = sapply(meta_split, function(x) x[[6]])
+
+meta = data.frame(Subject = meta_split_SID, Site = meta_split_site, Eth=meta_split_eth, AgeGroup=meta_split_AgeGrp, Age=meta_split_Age, ScanOrder=meta_split_Order, SiteAgeGrp=paste0(meta_split_site, meta_split_AgeGrp), SiteEthAgeGrp=paste0(meta_split_site, meta_split_eth, meta_split_AgeGrp))
+
+rawdat = test[,2:d[2]]
+
+taxa_split=strsplit(rownames(rawdat), ";")
+#taxa_genus=sapply(taxa_split, function(x) x[[length(taxa_split)-1]])
+meta_split_1 = sapply(taxa_split, function(x) x[[1]])
+meta_split_2 = sapply(taxa_split, function(x) x[[2]])
+meta_split_3 = sapply(taxa_split, function(x) x[[3]])
+meta_split_4 = sapply(taxa_split, function(x) x[[4]])
+meta_split_5 = sapply(taxa_split, function(x) x[[5]])
+meta_split_6 = sapply(taxa_split, function(x) x[[6]])
+tax=data.frame(kingdom=meta_split_1,phylumn=meta_split_2,
+               class=meta_split_3,order=meta_split_4,family=meta_split_5,
+               genus=meta_split_6, species=rep("NA", length(meta_split_6)))
+rawdat=cbind(tax, rawdat)
+
+```
+try read micro failed 
+try to use kellen's method to load into phyloseq
+```{r}
+source('meta_mat_to_phyloseq.R')
+phylo = meta_mat_to_phyloseq(rawdat, meta)
+source('remove_zeros.R')
+source('clean_taxa.R')
+phylo = phylo %>% clean_taxa(.) %>% remove_zeros(.)
+#Getting duplicated otus
+dup = !duplicated(tax_table(phylo))
+
+#Subsetting to remove duplicated values and normalizing
+colnames(sample_data(phylo))[3] = "Group" 
+
+#Removing duplicates and NA treatments (if any)
+phylo = phylo %>% subset_taxa(., dup)
+phylo = phylo %>% subset_samples(., !is.na(Site))
+```
+MDS Plot#### Need to seprate into different ages and add ecllipse Good it already gave the percentage seperation
+```{r}
+treat_pca = phyloseq::ordinate(phylo, "MDS")
+pca_plot = phyloseq::plot_ordination(phylo, treat_pca, color = "Site", method="bray") + theme_bw(24) + geom_point(size = 3)+ 
+  stat_ellipse(geom="polygon", aes(fill = Site), 
+                      alpha = 0.2,
+                      show.legend = FALSE, 
+                      level = 0.95)
+
+plot(pca_plot)
+
+```
+Now look at the rarefication curve
+```{r}
+set.seed(42)
+
+calculate_rarefaction_curves <- function(psdata, measures, depths) {
+  require('plyr') # ldply
+  require('reshape2') # melt
+
+  estimate_rarified_richness <- function(psdata, measures, depth) {
+    if(max(sample_sums(psdata)) < depth) return()
+    psdata <- prune_samples(sample_sums(psdata) >= depth, psdata)
+
+    rarified_psdata <- rarefy_even_depth(psdata, depth, verbose = FALSE)
+
+    alpha_diversity <- estimate_richness(rarified_psdata, measures = measures)
+
+    # as.matrix forces the use of melt.array, which includes the Sample names (rownames)
+    molten_alpha_diversity <- melt(as.matrix(alpha_diversity), varnames = c('Sample', 'Measure'), value.name = 'Alpha_diversity')
+
+    molten_alpha_diversity
+  }
+
+  names(depths) <- depths # this enables automatic addition of the Depth to the output by ldply
+  rarefaction_curve_data <- ldply(depths, estimate_rarified_richness, psdata = psdata, measures = measures, .id = 'Depth', .progress = ifelse(interactive(), 'text', 'none'))
+
+  # convert Depth from factor to numeric
+  rarefaction_curve_data$Depth <- as.numeric(levels(rarefaction_curve_data$Depth))[rarefaction_curve_data$Depth]
+
+  rarefaction_curve_data
+}
+
+rarefaction_curve_data <- calculate_rarefaction_curves(phylo, c('Observed', 'Shannon'), rep(c(1, 10, 100, 1000, 2000, 3000), each = 10))
+summary(rarefaction_curve_data)
+```
+
+
+```{r}
+rarefaction_curve_data_summary <- ddply(rarefaction_curve_data, c('Depth', 'Sample', 'Measure'), summarise, Alpha_diversity_mean = mean(Alpha_diversity), Alpha_diversity_sd = sd(Alpha_diversity))
+```
+
+```{r}
+rarefaction_curve_data_summary_verbose <- merge(rarefaction_curve_data_summary, data.frame(sample_data(phylo)), by.x = 'Sample', by.y = 'row.names')
+
+```
+
+```{r}
+library('ggplot2')
+jpeg('MDE_rarefication_curve.jpg', width = 4800, height = 1800, res=300)
+ggplot(
+  data = rarefaction_curve_data_summary_verbose,
+  mapping = aes(
+    x = Depth,
+    y = Alpha_diversity_mean,
+    ymin = Alpha_diversity_mean - Alpha_diversity_sd,
+    ymax = Alpha_diversity_mean + Alpha_diversity_sd,
+    colour = Site,
+    group = Sample
+  )
+) + geom_line(
+) + geom_pointrange(
+) + facet_wrap(
+  facets = ~ Measure,
+  scales = 'free_y'
+)
+dev.off()
+```
+adnois test
+
+```{r}
+library(vegan)
+metadata <- as(sample_data(phylo), "data.frame")
+metadata$Group = (metadata$Group)
+
+dist_sub = distance(phylo, method="bray") 
+
+adonis_site = adonis2(distance(phylo, method="euclidean") ~ Site, data = metadata)
+
+adonis_AgeGrp = adonis2(distance(phylo, method="euclidean") ~ AgeGroup, data = metadata)
+
+adonis_SiteAgeGrp = adonis2(distance(phylo, method="euclidean") ~ SiteAgeGrp, data = metadata)
+
+
+adonis_site_bray = adonis2(distance(phylo, method="bray") ~ Site, data = metadata)
+
+adonis_AgeGrp_bray = adonis2(distance(phylo, method="bray") ~ AgeGroup, data = metadata)
+
+adonis_SiteAgeGrp_bray = adonis2(distance(phylo, method="bray") ~ SiteAgeGrp, data = metadata)
+```
+richness data and plot
+```{r}
+jpeg('MDE_observe_shannon_diversity.jpg', width = 4800, height = 1800, res=300)
+plot_richness(phylo, x="SiteAgeGrp", color="Site", measures=c("Observed", "Shannon"))
+dev.off()
+
+```
+output richness data to a file
+
+```{r}
+alpha_table =cbind(attr(phylo, "sam_data") , estimate_richness(phylo))
+write.table(alpha_table, row.names = TRUE, col.names = TRUE, sep="\t", file="MDE_alph_diversity.txt")
+
+
+png(filename="MDE.shannon.png", width=1800, height=800,res=300)
+p1<-ggplot(alpha_table, aes(x=AgeGroup, y=Shannon, color=Site)) +geom_boxplot(color="black")+geom_jitter(position=position_jitter(0.2))+theme_bw()+facet_grid( . ~ Site)+geom_smooth(data=alpha_table,aes(x = AgeGroup, y = Shannon, group=1),method = "loess", color="orange",alpha=0.4, level=0.95, size = 0.8,span=1)+ylab("Shannon Diversity")+theme(legend.position = "none")
+print(p1)
+dev.off()
+png(filename="MDE.Observed.png", width=1800, height=800,res=300)
+p2<-ggplot(alpha_table, aes(x=AgeGroup, y=Observed, color=Site)) +geom_boxplot(color="black")+geom_jitter(position=position_jitter(0.2))+theme_bw()+facet_grid( . ~ Site)+geom_smooth(data=alpha_table,aes(x = AgeGroup, y = Observed, group=1),method = "loess", color="orange",alpha=0.4, level=0.95, size = 0.8,span=1)+ylab("Alpha diversity: Observed Genuses")+theme(legend.position = "none")
+print(p2)
+dev.off()
+```
+
+```{r}
+png(filename="MDE.MDS_Site.png", width=3800, height=1800,res=300)
+treat_pca = phyloseq::ordinate(phylo, "MDS", distance = "bray")
+pca_plot = phyloseq::plot_ordination(phylo, treat_pca, color = "Site") + theme_bw(24) + geom_point(size = 3)+ 
+  stat_ellipse(geom="polygon", aes(fill = Site), 
+                      alpha = 0.2,
+                      show.legend = FALSE, 
+                      level = 0.95)
+
+plot(pca_plot)
+dev.off()
+png(filename="MDE.MDS_AgeGrp_Site.png", width=6800, height=1800,res=300)
+pca2 = phyloseq::plot_ordination(phylo, treat_pca, color = "AgeGroup") + theme_bw(24) + geom_point(size = 3)+ 
+  stat_ellipse(geom="polygon", aes(fill = Site), 
+                      alpha = 0.01,
+                      show.legend = FALSE, 
+                      level = 0.95)+facet_grid(. ~ Site)
+plot(pca2)
+dev.off()
+
+png(filename="MDE.MDS_Site_AgeGrp.png", width=6800, height=1800,res=300)
+pca2 = phyloseq::plot_ordination(phylo, treat_pca, color = "Site") + theme_bw(24) + geom_point(size = 3)+ 
+  stat_ellipse(geom="polygon", aes(fill = Site), 
+                      alpha = 0.05,
+                      show.legend = FALSE, 
+                      level = 0.95)+facet_grid(. ~ AgeGroup)
+plot(pca2)
+dev.off()
+
+png(filename="MDE.MDS_AgeGrp.png", width=3800, height=1800,res=300)
+pca2 = phyloseq::plot_ordination(phylo, treat_pca, color = "AgeGroup") + theme_bw(24) + geom_point(size = 3)+ 
+  stat_ellipse(geom="polygon", aes(fill = Site), 
+                      alpha = 0.05,
+                      show.legend = FALSE, 
+                      level = 0.95)
+plot(pca2)
+dev.off()
+
+```
+

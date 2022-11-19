@@ -1,0 +1,98 @@
+---
+title: "Gladiator_gene_graph"
+author: "Ping Hu"
+date: "2022-11-16"
+output: html_document
+#####Note: taxon clean not clean , need to automate no matter which level it is if 6 need to remove species
+---
+###prepare data -- matrix for correlation analysis
+```{r 1setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+library(ggplot2)
+library(ggplot2)
+library(ggpubr)
+library(plotly)
+library(tidyverse)
+filename ="gladiator.7.short.stat"
+outname ="RA7wilcox"
+
+A<-read.table(filename, sep="\t", header=TRUE)
+d <- dim(A);
+taxonomy <- data.frame(A$TaxonName, A$TaxonName) 
+colnames(taxonomy)=c("OTU", "Taxon")
+tax <- taxonomy %>%
+  select(Taxon) %>% 
+  separate(Taxon, into=c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),sep="[.]")
+tax.clean <- data.frame(row.names = tax$OTU,
+                        Kingdom = str_replace(tax[,1], "k__",""),
+                        Phylum = str_replace(tax[,2], "p__",""),
+                        Class = str_replace(tax[,3], "c__",""),
+                        Order = str_replace(tax[,4], "o__",""),
+                        Family = str_replace(tax[,5], "f__",""),
+                        Genus = str_replace(tax[,6], "g__",""),
+                        Species = str_replace(tax[,7], "s__",""),
+                        stringsAsFactors = FALSE)
+
+tax.clean[is.na(tax.clean)] <- ""
+tax.clean[tax.clean=="__"] <- ""
+taxonlevel=dim(tax.clean)[2]
+A$taxon=tax.clean[,taxonlevel]
+
+```
+
+```{r 2graph echo=FALSE}
+p_table = bind_cols(
+    transmute(A, taxon = taxon) ,
+    transmute(A, fold_or_cor = truefc_A) ,
+                  transmute(A, diff_cat = Pwilcox_Azpt)) %>%
+    mutate(group = "1A:ZPT W3vsBL") 
+
+p2_table= bind_cols( transmute(A, taxon = taxon) ,
+      transmute(A, fold_or_cor = truefc_B), 
+      transmute(A, diff_cat = Pwilcox_Boct))%>%
+      mutate(group = "2B:PO W3vsBL")
+
+p3_table= bind_cols( transmute(A, taxon = taxon) ,transmute(A, fold_or_cor = truefc_C),
+                  transmute(A, diff_cat = Pwilcox_Cctl))  %>%
+      mutate(group = "3C:Ctl W3vsBL")
+ 
+p4_table=bind_cols( transmute(A, taxon = taxon) ,transmute(A, fold_or_cor = CorASFS_Spearman),
+                  transmute(A, diff_cat = PCor_Spearman)) %>%
+         mutate(group = "4ASFS Correlation")
+
+PAll=bind_rows(p_table,p2_table,p3_table,p4_table)
+PAll$diff_cat[is.na(PAll$diff_cat)]=1
+
+PAll$diff_Cor=recode((PAll$diff_cat <0.05)*1, 
+                `1` = "Significant",
+                `0` = "Nonsignificant")
+PAll$fold_or_cor[PAll$fold_or_cor < -10]=-10 
+PAll$fold_or_cor[PAll$fold_or_cor > 10]=10 
+```
+
+
+```{r 2graph echo=FALSE}
+png(filename = paste0(filename,".fold_cor.png"), width = 4880, height = 2860, res=300)
+p<-    ggplot(PAll,aes(y = taxon, x = fold_or_cor, color = diff_Cor)) +geom_point() +
+    geom_vline(xintercept = 0, color = "yellow", size=1)+
+    scale_color_brewer(palette = "Dark2", name = NULL) +
+    facet_grid(cols  = vars(group), scales = "free") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+ print(p)
+
+
+# round(res, 2)
+# tiff(filename = paste0(outname,".Cor.tiff"), width = 2860, height = 2860, res=300)
+ dev.off()
+
+```
+
+```{r 2graph echo=FALSE}
+split(PAll.taxon, ".")
+
+```
+
+
+

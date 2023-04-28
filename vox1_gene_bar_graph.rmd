@@ -1,0 +1,117 @@
+---
+title: "Gladiator_gene_graph"
+author: "Ping Hu"
+date: '2022-11-16'
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r 1setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+library(ggplot2)
+library(stringr)
+filename="vox1.selected.data2.txt"
+#filename="vox1.kraken.RASpecies.short.txt"
+library(ggplot2)
+library("ggpubr")
+A<-read.table(filename, sep="\t", header=TRUE)
+d <- dim(A);
+B=A[1:d[1], 2:d[2]]
+#ZZ=as.numeric(min(B[B>0&!is.na(B)]))/100
+#ZZ=0.000001
+ZZ=0
+C=B
+
+Cname=colnames(A)[2:d[2]]
+Clen=length(Cname) ##there are 3 annotation columns
+Categoty=rep("NA", Clen)
+Sid=rep("NA", Clen)
+
+TreatVisit=rep("NA", Clen)
+ASFS=rep("NA", Clen)
+age=rep("NA", Clen)
+gender=rep("NA", Clen)
+splitname<-strsplit(Cname, "[.]")
+Category=rep("NA", Clen)
+for(mm in  1:Clen ){
+          Category[mm]=splitname[[mm]][1]
+          Sid[mm]=splitname[[mm]][5]
+          ASFS[mm]=as.numeric(splitname[[mm]][2])
+          age[mm]=as.numeric(splitname[[mm]][4])
+          gender[mm]=splitname[[mm]][3]
+       
+}
+ASFS=as.numeric(ASFS[ASFS !="NA"])
+age=as.numeric(age[age !="NA"])
+Category[Category=="X1ND"]="1NoDandruff"
+Category[Category=="X3D"]="3Dandruff"
+Category[Category=="X2MID"]="2Intermediate"
+```
+
+```{r 2datasummaryfunction}
+## R draw figure
+#+++++++++++++++++++++++++
+# Function to calculate the mean and the standard deviation
+  # for each group
+#+++++++++++++++++++++++++
+# data : a data frame
+# varname : the name of a column containing the variable
+  #to be summariezed
+# groupnames : vector of column names to be used as
+  # grouping variables
+library("plotrix")
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE),
+      se= std.error(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+```
+
+
+```{r 3data prepare, echo=FALSE}
+for (i in 1:d[1]){
+
+    genename=A[i,1]
+    gene<-as.numeric(C[i,])
+    splitG<-strsplit(as.character(genename), "[.]")
+    LLL=length(splitG[[1]])
+    genus=splitG[[1]][LLL]
+    ccc=as.numeric(min(gene[gene>0&!is.na(gene)]))/10
+    RA=gene+ccc
+    logRA=log(RA)
+    mydata=data.frame(RA,logRA, Category, age, Sid, ASFS, gender)
+  
+    df2 <- data_summary(mydata, varname="RA", 
+                    groupnames=c("Category"))
+    
+    
+    
+
+png(filename=paste0("Vox1_2023.",i,".",genus, ".png"),  width=580, height=580, res=180)
+p<- ggplot(df2, aes(x=Category, y=RA,group=Category, color=Category)) + 
+  geom_line() +
+  geom_point(size=3)+
+  geom_errorbar(aes(ymin=RA-se, ymax=RA+se), width=.2,
+                 position=position_dodge(0.05)) +
+  labs(x="Category", y = paste0(genus, "(%)"))+
+   theme_classic() +
+   theme(legend.position="none")
+
+print(p)
+dev.off()
+
+}
+
+```
+
+
+

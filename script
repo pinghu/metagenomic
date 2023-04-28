@@ -1,0 +1,40 @@
+sed -i -e 's|["\/'\''#,]||g' pathabundance.community.relab10
+sed -i -e 's|["\/'\''#,]||g' pathcoverage.community.tsv
+sed -i -e 's|["\/'\''#,]||g' freshpad_combine_data04_27_2023.txt
+
+
+for i in  "metaphlan.relab10.1" "metaphlan.relab10.2" "metaphlan.relab10.3" "metaphlan.relab10.1" "metaphlan.relab10.4" "metaphlan.relab10.5" "metaphlan.relab10.6" "metaphlan.relab10.7"  "kraken_fungi18DB_summary.clean.2.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.3.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.3.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.4.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.5.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.6.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.7.recal.Percent.RShort.xls" "genefamily.community.uniref90_go.relab10" "genefamily.community.uniref90_ko.relab10" "genefamily.community.uniref90_level4ec.relab10" "genefamily.community.uniref90_eggnog.relab10" "genefamily.community.uniref90_pfam.relab10" "genefamily.community.uniref90_rxn.relab10" "genefamily.community.relab10" "pathcoverage.community.tsv" "pathabundance.community.relab10"  "freshpad.data.noNA" ; do Rscript ../src/get_wilcox.R $i 1>$i.stat 2>$i.err;   perl ~/bin/break_R_output.pl $i.stat;   Rscript ../src/adjustP.R $i.stat.xls;   perl ~/bin/break_R_output_add1.pl $i.stat.xls.adjustp;   paste $i.stat.xls $i.stat.xls.adjustp.xls > ../$i.stat.xls;   rm $i.stat*; done
+
+
+for i in  "metaphlan.relab10.1" "metaphlan.relab10.2" "metaphlan.relab10.3" "metaphlan.relab10.1" "metaphlan.relab10.4" "metaphlan.relab10.5" "metaphlan.relab10.6" "metaphlan.relab10.7"  "kraken_fungi18DB_summary.clean.2.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.3.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.3.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.4.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.5.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.6.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.7.recal.Percent.RShort.xls" "genefamily.community.uniref90_go.relab10" "genefamily.community.uniref90_ko.relab10" "genefamily.community.uniref90_level4ec.relab10" "genefamily.community.uniref90_eggnog.relab10" "genefamily.community.uniref90_pfam.relab10" "genefamily.community.uniref90_rxn.relab10" "genefamily.community.relab10" "pathcoverage.community.tsv" "pathabundance.community.relab10"   ; do Rscript ../src/get_cor_csv_2files.R $i; perl ../src/select_correlation_2_flatcorfile.pl $i.corFlatS.tsv $i.corFlatP.tsv $i; done
+
+for i in  "metaphlan.relab10.1" "metaphlan.relab10.2" "metaphlan.relab10.3" "metaphlan.relab10.1" "metaphlan.relab10.4" "metaphlan.relab10.5" "metaphlan.relab10.6" "metaphlan.relab10.7"  "kraken_fungi18DB_summary.clean.2.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.3.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.3.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.4.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.5.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.6.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.7.recal.Percent.RShort.xls" "genefamily.community.uniref90_go.relab10" "genefamily.community.uniref90_ko.relab10" "genefamily.community.uniref90_level4ec.relab10" "genefamily.community.uniref90_eggnog.relab10" "genefamily.community.uniref90_pfam.relab10" "genefamily.community.uniref90_rxn.relab10" "genefamily.community.relab10" "pathcoverage.community.tsv" "pathabundance.community.relab10"  "freshpad.data.noNA" ; do Rscript ../src/get_wilcox_absolute.R $i 1>$i.stat 2>$i.err;   perl ~/bin/break_R_output.pl $i.stat;   Rscript ../src/adjustP.R $i.stat.xls;   perl ~/bin/break_R_output_add1.pl $i.stat.xls.adjustp;   paste $i.stat.xls $i.stat.xls.adjustp.xls > ../$i.absolute.stat.xls;   rm $i.stat*; done
+
+
+for i in  "metaphlan.relab10.1" "metaphlan.relab10.2" "metaphlan.relab10.3" "metaphlan.relab10.1" "metaphlan.relab10.4" "metaphlan.relab10.5" "metaphlan.relab10.6" "metaphlan.relab10.7"  "kraken_fungi18DB_summary.clean.2.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.3.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.3.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.4.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.5.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.6.recal.Percent.RShort.xls" "kraken_fungi18DB_summary.clean.7.recal.Percent.RShort.xls" "genefamily.community.uniref90_go.relab10" "genefamily.community.uniref90_ko.relab10" "genefamily.community.uniref90_level4ec.relab10" "genefamily.community.uniref90_eggnog.relab10" "genefamily.community.uniref90_pfam.relab10" "genefamily.community.uniref90_rxn.relab10" "genefamily.community.relab10" "pathcoverage.community.tsv" "pathabundance.community.relab10"   ; do Rscript ../src/get_cor_csv_2files_absolute.R $i; perl ../src/select_correlation_2_flatcorfile.pl $i.corFlatS.tsv $i.corFlatP.tsv $i; done
+
+
+
+
+
+
+
+####Now need to put the annotation into the data
+conda activate biobakery3
+humann_rename_table --input genefamily.community.uniref90_rxn.relab10.stat.xls --output genefamily.community.uniref90_rxn.relab10.statann.xls --names metacyc-rxn
+humann_rename_table --input genefamily.community.uniref90_level4ec.relab10.stat.xls --output genefamily.community.uniref90_level4ec.relab10.statann.xls --names ec
+humann_rename_table --input genefamily.community.uniref90_go.relab10.stat.xls --output genefamily.community.uniref90_go.relab10.statann.xls --names go
+humann_rename_table --input genefamily.community.uniref90_ko.relab10.stat.xls --output genefamily.community.uniref90_ko.relab10.statann.xls --names kegg-orthology
+humann_rename_table --input genefamily.community.uniref90_eggnog.relab10.stat.xls --output genefamily.community.uniref90_eggnog.relab10.statann.xls --names eggnog
+humann_rename_table --input genefamily.community.uniref90_pfam.relab10.stat.xls --output genefamily.community.uniref90_pfam.relab10.statann.xls  --names pfam
+humann_rename_table --input  genefamily.community.relab10.stat.xls --output genefamily.community.relab10.statann.xls  --names uniref90
+
+####Next need to get the diversity measurement and graph done
+conda activate biobakery3
+humann_rename_table --input genefamily.community.uniref90_rxn.relab10.absolute.stat.xls --output genefamily.community.uniref90_rxn.relab10.absolute.statann.xls --names metacyc-rxn
+humann_rename_table --input genefamily.community.uniref90_level4ec.relab10.absolute.stat.xls --output genefamily.community.uniref90_level4ec.relab10.absolute.statann.xls --names ec
+humann_rename_table --input genefamily.community.uniref90_go.relab10.absolute.stat.xls --output genefamily.community.uniref90_go.relab10.absolute.statann.xls --names go
+humann_rename_table --input genefamily.community.uniref90_ko.relab10.absolute.stat.xls --output genefamily.community.uniref90_ko.relab10.absolute.statann.xls --names kegg-orthology
+humann_rename_table --input genefamily.community.uniref90_eggnog.relab10.absolute.stat.xls --output genefamily.community.uniref90_eggnog.relab10.absolute.statann.xls --names eggnog
+humann_rename_table --input genefamily.community.uniref90_pfam.relab10.absolute.stat.xls --output genefamily.community.uniref90_pfam.relab10.absolute.statann.xls  --names pfam
+humann_rename_table --input  genefamily.community.relab10.absolute.stat.xls --output genefamily.community.relab10.absolute.statann.xls  --names uniref90
